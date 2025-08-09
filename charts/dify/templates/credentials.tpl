@@ -146,6 +146,10 @@ TABLESTORE_ACCESS_KEY_SECRET: {{ .Values.externalTableStore.accessKeySecret | b6
   {{- if .Values.weaviate.authentication.apikey }}
 WEAVIATE_API_KEY: {{ first .Values.weaviate.authentication.apikey.allowed_keys | b64enc | quote }}
   {{- end }}
+{{- else if .Values.qdrant.enabled }}
+  {{- if .Values.qdrant.apiKey }}
+QDRANT_API_KEY: {{ .Values.qdrant.apiKey | b64enc | quote }}
+  {{- end }}
 {{- end }}
 {{- end }}
 
