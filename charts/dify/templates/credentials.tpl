@@ -189,6 +189,21 @@ DIFY_INNER_API_KEY: {{ .Values.pluginDaemon.auth.difyApiKey | b64enc | quote }}
 {{- if and .Values.externalS3.enabled .Values.externalS3.bucketName.pluginDaemon }}
 AWS_ACCESS_KEY: {{ .Values.externalS3.accessKey | b64enc | quote }}
 AWS_SECRET_KEY: {{ .Values.externalS3.secretKey | b64enc | quote }}
+{{- else if .Values.externalAzureBlobStorage.enabled }}
+  {{- with .Values.externalAzureBlobStorage }}
+    {{- if hasSuffix ".r2.cloudflarestorage.com" .url }}
+      {{- fail "Error: Cloudflare R2 is not supported with externalAzureBlobStorage configuration. Please use the externalS3 configuration for Cloudflare R2 storage." }}
+    {{- end }}
+    {{- $protocol := "" }}
+    {{- if hasPrefix "https://" .url }}
+      {{- $protocol = "https" }}
+    {{- else if hasPrefix "http://" .url }}
+      {{- $protocol = "http" }}
+    {{- else }}
+      {{- fail "Error: externalAzureBlobStorage.url must start with either 'http://' or 'https://'" }}
+    {{- end }}
+AZURE_BLOB_STORAGE_CONNECTION_STRING: {{ printf "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s;BlobEndpoint=%s;" $protocol .account .key .url | b64enc | quote }}
+  {{- end }}
 {{- else if and .Values.externalOSS.enabled .Values.externalOSS.bucketName.pluginDaemon }}
 ALIYUN_OSS_ACCESS_KEY_SECRET: {{ .Values.externalOSS.secretKey | b64enc | quote }}
 {{- else if and .Values.externalGCS.enabled .Values.externalGCS.bucketName.pluginDaemon }}
@@ -198,6 +213,6 @@ TENCENT_COS_SECRET_KEY: {{ .Values.externalCOS.secretKey | b64enc | quote }}
 {{- else if and .Values.externalOBS.enabled .Values.externalOBS.bucketName.pluginDaemon }}
 HUAWEI_OBS_SECRET_KEY: {{ .Values.externalOBS.secretKey | b64enc | quote }}
 {{- else if and .Values.externalTOS.enabled .Values.externalTOS.bucketName.pluginDaemon }}
-PLUGIN_VOLCENGINE_TOS_SECRET_KEY: {{ .Values.externalTOS.secretKey | b64enc | quote }}
+VOLCENGINE_TOS_SECRET_KEY: {{ .Values.externalTOS.secretKey | b64enc | quote }}
 {{- end }}
 {{- end }}

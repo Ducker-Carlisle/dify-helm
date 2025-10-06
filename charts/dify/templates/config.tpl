@@ -650,6 +650,9 @@ S3_ENDPOINT: {{ .Values.externalS3.endpoint | quote }}
 PLUGIN_STORAGE_OSS_BUCKET: {{ .Values.externalS3.bucketName.pluginDaemon | quote }}
 AWS_REGION: {{ .Values.externalS3.region | quote }}
 S3_USE_AWS_MANAGED_IAM: {{ .Values.externalS3.useIAM | toString | quote }}
+{{- else if .Values.externalAzureBlobStorage.enabled }}
+PLUGIN_STORAGE_TYPE: "azure_blob"
+AZURE_BLOB_STORAGE_CONTAINER_NAME: {{ .Values.externalAzureBlobStorage.container | quote }}
 {{- else if and .Values.externalOSS.enabled .Values.externalOSS.bucketName.pluginDaemon }}
 PLUGIN_STORAGE_TYPE: "aliyun_oss"
 ALIYUN_OSS_REGION: {{ .Values.externalOSS.region | quote }}
@@ -676,11 +679,11 @@ HUAWEI_OBS_ACCESS_KEY: {{ .Values.externalOBS.accessKey | quote }}
 # HUAWEI_OBS_SECRET_KEY: {{ .Values.externalOBS.secretKey | quote }}
 {{- else if and .Values.externalTOS.enabled .Values.externalTOS.bucketName.pluginDaemon }}
 PLUGIN_STORAGE_TYPE: "volcengine-tos"
-PLUGIN_VOLCENGINE_TOS_ENDPOINT: {{ .Values.externalTOS.endpoint | quote }}
-PLUGIN_VOLCENGINE_TOS_REGION: {{ .Values.externalTOS.region | quote }}
+VOLCENGINE_TOS_ENDPOINT: {{ .Values.externalTOS.endpoint | quote }}
+VOLCENGINE_TOS_REGION: {{ .Values.externalTOS.region | quote }}
 PLUGIN_STORAGE_OSS_BUCKET: {{ .Values.externalTOS.bucketName.pluginDaemon | quote }}
-PLUGIN_VOLCENGINE_TOS_ACCESS_KEY: {{ .Values.externalTOS.accessKey | quote }}
-# PLUGIN_VOLCENGINE_TOS_SECRET_KEY: {{ .Values.externalTOS.secretKey | quote }}
+VOLCENGINE_TOS_ACCESS_KEY: {{ .Values.externalTOS.accessKey | quote }}
+# VOLCENGINE_TOS_SECRET_KEY: {{ .Values.externalTOS.secretKey | quote }}
 {{- else }}
 PLUGIN_STORAGE_TYPE: local
 STORAGE_LOCAL_PATH: {{ .Values.pluginDaemon.persistence.mountPath | quote }}

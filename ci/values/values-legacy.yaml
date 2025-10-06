@@ -5,12 +5,12 @@
 image:
   api:
     repository: langgenius/dify-api
-    tag: "1.7.1"
+    tag: "1.8.1"
     pullPolicy: IfNotPresent
 
   web:
     repository: langgenius/dify-web
-    tag: "1.7.1"
+    tag: "1.8.1"
     pullPolicy: IfNotPresent
 
   sandbox:
@@ -134,19 +134,19 @@ api:
     # OpenTelemetry exporter type
     exporterType: "otlp"
     # OpenTelemetry sampling rate
-    samplingRate: "0.1"
+    samplingRate: 0.1
     # OpenTelemetry batch export schedule delay in milliseconds
-    batchExportScheduleDelay: "5000"
+    batchExportScheduleDelay: 5000
     # OpenTelemetry max queue size
-    maxQueueSize: "2048"
+    maxQueueSize: 2048
     # OpenTelemetry max export batch size
-    maxExportBatchSize: "512"
+    maxExportBatchSize: 512
     # OpenTelemetry metric export interval in milliseconds
-    metricExportInterval: "60000"
+    metricExportInterval: 60000
     # OpenTelemetry batch export timeout in milliseconds
-    batchExportTimeout: "10000"
+    batchExportTimeout: 10000
     # OpenTelemetry metric export timeout in milliseconds
-    metricExportTimeout: "30000"
+    metricExportTimeout: 30000
 
   service:
     port: 5001
@@ -278,36 +278,6 @@ worker:
   #      secretKeyRef:
   #        name: my-secret
   #        key: DB_PASSWORD
-
-  ## OpenTelemetry (OTEL) configuration
-  otel:
-    enabled: false
-    # OpenTelemetry trace endpoint
-    traceEndpoint: ""
-    # OpenTelemetry metric endpoint
-    metricEndpoint: ""
-    # OpenTelemetry base endpoint
-    baseEndpoint: "http://localhost:4318"
-    # OpenTelemetry API Key (sensitive - stored in secret)
-    apiKey: ""
-    # OpenTelemetry exporter protocol
-    exporterProtocol: ""
-    # OpenTelemetry exporter type
-    exporterType: "otlp"
-    # OpenTelemetry sampling rate
-    samplingRate: "0.1"
-    # OpenTelemetry batch export schedule delay in milliseconds
-    batchExportScheduleDelay: "5000"
-    # OpenTelemetry max queue size
-    maxQueueSize: "2048"
-    # OpenTelemetry max export batch size
-    maxExportBatchSize: "512"
-    # OpenTelemetry metric export interval in milliseconds
-    metricExportInterval: "60000"
-    # OpenTelemetry batch export timeout in milliseconds
-    batchExportTimeout: "10000"
-    # OpenTelemetry metric export timeout in milliseconds
-    metricExportTimeout: "30000"
 
   logLevel: INFO
   ## Dify Worker ServiceAccount configuration
@@ -778,7 +748,7 @@ postgresql:
         database: "dify"
   image:
     registry: docker.io
-    repository: bitnami/postgresql
+    repository: bitnamilegacy/postgresql
     tag: 15.3.0-debian-11-r7
     pullPolicy: IfNotPresent
   ## @param architecture PostgreSQL architecture (`standalone` or `replication`)
@@ -1374,7 +1344,7 @@ redis:
   ##
   image:
     registry: docker.io
-    repository: bitnami/redis
+    repository: bitnamilegacy/redis
     tag: 7.0.11-debian-11-r12
     digest: ""
     ## Specify a imagePullPolicy
@@ -2287,7 +2257,7 @@ redis:
     ##
     image:
       registry: docker.io
-      repository: bitnami/redis-sentinel
+      repository: bitnamilegacy/redis-sentinel
       tag: 7.0.11-debian-11-r10
       digest: ""
       ## Specify a imagePullPolicy
@@ -2729,7 +2699,7 @@ redis:
     ##
     image:
       registry: docker.io
-      repository: bitnami/redis-exporter
+      repository: bitnamilegacy/redis-exporter
       tag: 1.50.0-debian-11-r13
       digest: ""
       pullPolicy: IfNotPresent
@@ -2983,7 +2953,7 @@ redis:
     ##
     image:
       registry: docker.io
-      repository: bitnami/bitnami-shell
+      repository: bitnamilegacy/bitnami-shell
       tag: 11-debian-11-r118
       digest: ""
       pullPolicy: IfNotPresent
@@ -3031,7 +3001,7 @@ redis:
     ##
     image:
       registry: docker.io
-      repository: bitnami/bitnami-shell
+      repository: bitnamilegacy/bitnami-shell
       tag: 11-debian-11-r118
       digest: ""
       pullPolicy: IfNotPresent
@@ -3084,8 +3054,6 @@ externalPostgres:
   database:
     api: "dify"
     pluginDaemon: "dify_plugin"
-  maxOpenConns: 20
-  maxIdleConns: 5
 
 ###################################
 # External S3
