@@ -8,23 +8,23 @@ LOG_LEVEL: {{ .Values.api.logLevel | quote }}
 # The base URL of console application web frontend, refers to the Console base URL of WEB service if console domain is
 # different from api or web app domain.
 # example: http://cloud.dify.ai
-CONSOLE_WEB_URL: {{ .Values.api.url.consoleWeb | quote }}
+CONSOLE_WEB_URL: {{ .Values.api.url.consoleWeb | default .Values.global.consoleWebDomain | quote }}
 # The base URL of console application api server, refers to the Console base URL of WEB service if console domain is
 # different from api or web app domain.
 # example: http://cloud.dify.ai
-CONSOLE_API_URL: {{ .Values.api.url.consoleApi | quote }}
+CONSOLE_API_URL: {{ .Values.api.url.consoleApi | default .Values.global.consoleApiDomain | quote }}
 # The URL prefix for Service API endpoints, refers to the base URL of the current API service if api domain is
 # different from console domain.
 # example: http://api.dify.ai
-SERVICE_API_URL: {{ .Values.api.url.serviceApi | quote }}
+SERVICE_API_URL: {{ .Values.api.url.serviceApi | default .Values.global.serviceApiDomain | quote }}
 # The URL prefix for Web APP frontend, refers to the Web App base URL of WEB service if web app domain is different from
 # console or api domain.
 # example: http://udify.app
-APP_WEB_URL: {{ .Values.api.url.appWeb | quote }}
+APP_WEB_URL: {{ .Values.api.url.appWeb | default .Values.global.appWebDomain | quote }}
 # File preview or download Url prefix.
 # used to display File preview or download Url to the front-end or as Multi-model inputs;
 # Url is signed and has expiration time.
-FILES_URL: {{ .Values.api.url.files | quote }}
+FILES_URL: {{ .Values.api.url.files | default .Values.global.filesDomain | quote }}
 {{- include "dify.marketplace.config" . }}
 # When enabled, migrations will be executed prior to application startup and the application will start after the migrations have completed.
 MIGRATION_ENABLED: {{ .Values.api.migration | toString | quote }}
@@ -105,17 +105,14 @@ OTEL_METRIC_EXPORT_TIMEOUT: {{ .Values.api.otel.metricExportTimeout | toString |
 {{- define "dify.worker.config" -}}
 # worker service
 # The Celery worker for processing the queue.
-# Startup mode, 'worker' starts the Celery worker for processing the queue.
-MODE: worker
+
 
 # The base URL of console application web frontend, refers to the Console base URL of WEB service if console domain is
 # different from api or web app domain.
 # example: http://cloud.dify.ai
-CONSOLE_WEB_URL: {{ .Values.api.url.consoleWeb | quote }}
+CONSOLE_WEB_URL: {{ .Values.api.url.consoleWeb | default .Values.global.consoleWebDomain | quote }}
 # --- All the configurations below are the same as those in the 'api' service. ---
 
-# The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-LOG_LEVEL: {{ .Values.worker.logLevel | quote }}
 # A secret key that is used for securely signing the session cookie and encrypting sensitive information on the database. You can generate a strong key using `openssl rand -base64 42`.
 # same as the API service
 # SECRET_KEY: {{ .Values.api.secretKey }}
@@ -163,32 +160,45 @@ OTEL_METRIC_EXPORT_TIMEOUT: {{ .Values.api.otel.metricExportTimeout | toString |
 {{- end }}
 
 {{- define "dify.web.config" -}}
+{{- if .Values.global.edition }}
+# The edition of the application, SELF_HOSTED or CLOUD
+EDITION: {{ .Values.global.edition | quote }}
+{{- end }}
 # The base URL of console application api server, refers to the Console base URL of WEB service if console domain is
 # different from api or web app domain.
 # example: http://cloud.dify.ai
-CONSOLE_API_URL: {{ .Values.api.url.consoleApi | quote }}
+CONSOLE_API_URL: {{ .Values.api.url.consoleApi | default .Values.global.consoleApiDomain | quote }}
 # The URL for Web APP api server, refers to the Web App base URL of WEB service if web app domain is different from
 # console or api domain.
 # example: http://udify.app
-APP_API_URL: {{ .Values.api.url.appApi | quote }}
+APP_API_URL: {{ .Values.api.url.appApi | default .Values.global.appApiDomain | quote }}
 # The DSN for Sentry
-{{- if and .Values.pluginDaemon.enabled .Values.pluginDaemon.marketplace.enabled .Values.pluginDaemon.marketplace.apiProxyEnabled }}
+{{- if and .Values.pluginDaemon.enabled (.Values.pluginDaemon.marketplace.enabled | default .Values.global.marketplace.enabled) (.Values.pluginDaemon.marketplace.apiProxyEnabled | default .Values.global.marketplace.apiProxyEnabled) }}
 MARKETPLACE_ENABLED: "true"
 MARKETPLACE_API_URL: "/marketplace"
 {{- else }}
 {{- include "dify.marketplace.config" . }}
 {{- end }}
-MARKETPLACE_URL: {{ .Values.api.url.marketplace | quote }}
+MARKETPLACE_URL: {{ .Values.api.url.marketplace | default .Values.global.marketplace.url | quote }}
 {{- end }}
 
 {{- define "dify.db.config" -}}
 {{- if .Values.externalPostgres.enabled }}
+DB_TYPE: postgresql
 # DB_USERNAME: {{ .Values.externalPostgres.username | quote }}
 # DB_PASSWORD: {{ .Values.externalPostgres.password | quote }}
 DB_HOST: {{ .Values.externalPostgres.address }}
 DB_PORT: {{ .Values.externalPostgres.port | toString | quote }}
 DB_DATABASE: {{ .Values.externalPostgres.database.api | quote }}
+{{- else if .Values.externalMysql.enabled }}
+DB_TYPE: mysql
+# DB_USERNAME: {{ .Values.externalMysql.username | quote }}
+# DB_PASSWORD: {{ .Values.externalMysql.password | quote }}
+DB_HOST: {{ .Values.externalMysql.address | quote }}
+DB_PORT: {{ .Values.externalMysql.port | toString | quote }}
+DB_DATABASE: {{ .Values.externalMysql.database.api | quote }}
 {{- else if .Values.postgresql.enabled }}
+DB_TYPE: postgresql
   {{ with .Values.postgresql.global.postgresql.auth }}
   {{- if empty .username }}
 # DB_USERNAME: postgres
@@ -281,19 +291,49 @@ STORAGE_LOCAL_PATH: {{ .Values.api.persistence.mountPath | quote }}
 {{- define "dify.redis.config" -}}
 {{- if .Values.externalRedis.enabled }}
   {{- with .Values.externalRedis }}
+    {{- if .sentinel.enabled }}
+REDIS_USE_SENTINEL: "true"
+REDIS_SENTINELS: {{ join "," .sentinel.sentinels | quote }}
+REDIS_SENTINEL_SERVICE_NAME: {{ .sentinel.masterSet | quote }}
+REDIS_SENTINEL_USERNAME: ""
+REDIS_SENTINEL_SOCKET_TIMEOUT: "0.1"
+    {{- else }}
 REDIS_HOST: {{ .host | quote }}
 REDIS_PORT: {{ .port | toString | quote }}
 # REDIS_USERNAME: {{ .username | quote }}
 # REDIS_PASSWORD: {{ .password | quote }}
 REDIS_USE_SSL: {{ .useSSL | toString | quote }}
-# use redis db 0 for redis cache
-REDIS_DB: "0"
+    {{- end }}
+# use redis db for redis cache, configurable via .Values.externalRedis.db
+REDIS_DB: {{ .db.app | default 0 | toString | quote }}
   {{- end }}
 {{- else if .Values.redis.enabled }}
-{{- $redisHost := printf "%s-redis-master" .Release.Name -}}
-  {{- with .Values.redis }}
-REDIS_HOST: {{ $redisHost }}
-REDIS_PORT: {{ .master.service.ports.redis | toString | quote }}
+{{- $releaseName := printf "%s" .Release.Name -}}
+{{- $namespace := .Release.Namespace -}}
+{{- with .Values.redis }}
+  {{- if .sentinel.enabled }}
+    {{- $sentinelPort := .sentinel.service.ports.sentinel | int -}}
+    {{- $masterSet := .sentinel.masterSet -}}
+    {{- $password := .auth.password -}}
+# Redis Sentinel configuration
+{{- $sentinelHosts := list }}
+{{- range $i, $e := until (.replica.replicaCount | int) }}
+{{- $sentinelHosts = append $sentinelHosts (printf "%s-redis-node-%d.%s-redis-headless.%s.svc.cluster.local:%d" $releaseName $i $releaseName $namespace $sentinelPort) }}
+{{- end }}
+# use redis db 0 for redis cache
+REDIS_DB: "0"
+REDIS_USE_SENTINEL: "true"
+REDIS_SENTINELS: {{ join "," $sentinelHosts | quote }}
+REDIS_SENTINEL_SERVICE_NAME: {{ $masterSet | quote }}
+REDIS_SENTINEL_USERNAME: ""
+# REDIS_SENTINEL_PASSWORD: {{ .auth.password | quote }}
+REDIS_SENTINEL_SOCKET_TIMEOUT: "0.1"
+  {{- else }}
+# Standalone Redis configuration
+    {{- $redisHost := printf "%s-redis-master" $releaseName -}}
+    {{- $redisPort := .master.service.ports.redis }}
+REDIS_HOST: {{ $redisHost | quote }}
+REDIS_PORT: {{ $redisPort | toString | quote }}
 # REDIS_USERNAME: ""
 # REDIS_PASSWORD: {{ .auth.password | quote }}
 REDIS_USE_SSL: {{ .tls.enabled | toString | quote }}
@@ -302,22 +342,60 @@ REDIS_DB: "0"
   {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
 
 {{- define "dify.celery.config" -}}
 # Use redis as the broker, and redis db 1 for celery broker.
 {{- if .Values.externalRedis.enabled }}
   {{- with .Values.externalRedis }}
-    {{- $scheme := "redis" }}
-    {{- if .useSSL }}
-      {{- $scheme = "rediss" }}
-    {{- end }}
+    {{- if .sentinel.enabled }}
+# If use Redis Sentinel, format as follows: `sentinel://<redis_username>:<redis_password>@<sentinel_host1>:<sentinel_port>/<redis_database>`
+# For high availability, you can configure multiple Sentinel nodes (if provided) separated by semicolons like below example:
+# Example: sentinel://:difyai123456@localhost:26379/1;sentinel://:difyai12345@localhost:26379/1;sentinel://:difyai12345@localhost:26379/1
+CELERY_SENTINEL_MASTER_NAME: {{ .sentinel.masterSet | quote }}
+# Note: In sentinel mode, the password is already included in the broker URL
+# CELERY_SENTINEL_PASSWORD: {{ .sentinel.password | quote }}
+CELERY_SENTINEL_SOCKET_TIMEOUT: "0.1"
+CELERY_USE_SENTINEL: "true"
+    {{- else }}
+      {{- $scheme := "redis" }}
+      {{- if .useSSL }}
+        {{- $scheme = "rediss" }}
+      {{- end }}
 # CELERY_BROKER_URL: {{ printf "%s://%s:%s@%s:%v/1" $scheme .username .password .host .port }}
+    {{- end }}
   {{- end }}
 {{- else if .Values.redis.enabled }}
-{{- $redisHost := printf "%s-redis-master" .Release.Name -}}
-  {{- with .Values.redis }}
-# CELERY_BROKER_URL: {{ printf "redis://:%s@%s:%v/1" .auth.password $redisHost .master.service.ports.redis }}
+{{- $releaseName := printf "%s" .Release.Name -}}
+{{- $namespace := .Release.Namespace -}}
+{{- with .Values.redis }}
+  {{- if .sentinel.enabled }}
+    {{- $sentinelPort := .sentinel.service.ports.sentinel | int -}}
+    {{- $masterSet := .sentinel.masterSet -}}
+    {{- $password := .auth.password -}}
+# If use Redis Sentinel, format as follows: `sentinel://<redis_username>:<redis_password>@<sentinel_host1>:<sentinel_port>/<redis_database>`
+# For high availability, you can configure multiple Sentinel nodes (if provided) separated by semicolons like below example:
+# Example: sentinel://:difyai123456@localhost:26379/1;sentinel://:difyai12345@localhost:26379/1;sentinel://:difyai12345@localhost:26379/1
+
+{{- $sentinelUrls := list }}
+{{- range $i, $e := until (.replica.replicaCount | int) }}
+{{- $sentinelUrls = append $sentinelUrls (printf "sentinel://:%s@%s-redis-node-%d.%s-redis-headless.%s.svc.cluster.local:%d/1" $password $releaseName $i $releaseName $namespace $sentinelPort) }}
+{{- end }}
+# CELERY_BROKER_URL: {{ join ";" $sentinelUrls | quote }}
+CELERY_SENTINEL_MASTER_NAME: {{ $masterSet | quote }}
+# Note: In sentinel mode, the password is already included in the broker URL
+# CELERY_SENTINEL_PASSWORD: {{ .auth.password | quote }}
+CELERY_SENTINEL_SOCKET_TIMEOUT: "0.1"
+CELERY_USE_SENTINEL: "true"
+  {{- else }}
+# Use standalone redis as the broker, and redis db 1 for celery broker. (redis_username is usually set by defualt as empty)
+# Format as follows: `redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>`.
+# Example: redis://:difyai123456@redis:6379/1
+    {{- $redisHost := printf "%s-redis-master" $releaseName -}}
+    {{- $redisPort := .master.service.ports.redis }}
+# CELERY_BROKER_URL: {{ printf "redis://:%s@%s:%v/1" .auth.password $redisHost $redisPort | quote }}
   {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -326,7 +404,10 @@ REDIS_DB: "0"
 # The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`, `pgvector`, `tencent`, `myscale`.
 VECTOR_STORE: weaviate
 # The Weaviate endpoint URL. Only available when VECTOR_STORE is `weaviate`.
-WEAVIATE_ENDPOINT: {{ .Values.externalWeaviate.endpoint | quote }}
+WEAVIATE_ENDPOINT: {{ .Values.externalWeaviate.endpoint.http | quote }}
+{{- if .Values.externalWeaviate.endpoint.grpc }}
+WEAVIATE_GRPC_ENDPOINT: {{ .Values.externalWeaviate.endpoint.grpc | quote }}
+{{- end }}
 # The Weaviate API key.
 # WEAVIATE_API_KEY: {{ .Values.externalWeaviate.apiKey }}
 {{- else if .Values.externalQdrant.enabled }}
@@ -367,7 +448,7 @@ TENCENT_VECTOR_DB_TIMEOUT: {{ .Values.externalTencentVectorDB.timeout | quote }}
 TENCENT_VECTOR_DB_DATABASE: {{ .Values.externalTencentVectorDB.database | quote }}
 TENCENT_VECTOR_DB_SHARD: {{ .Values.externalTencentVectorDB.shard | quote }}
 TENCENT_VECTOR_DB_REPLICAS: {{ .Values.externalTencentVectorDB.replicas | quote }}
-{{- else if .Values.externalMyScaleDB.enabled}}
+{{- else if .Values.externalMyScaleDB.enabled }}
 # MyScaleDB vector db configurations, only available when VECTOR_STORE is `myscale`
 VECTOR_STORE: myscale
 MYSCALE_HOST: {{ .Values.externalMyScaleDB.host | quote }}
@@ -395,7 +476,7 @@ VECTOR_STORE: weaviate
     {{- if and (eq .type "ClusterIP") (not (eq .clusterIP "None"))}}
 # The Weaviate endpoint URL. Only available when VECTOR_STORE is `weaviate`.
 {{/*
-Pitfall: scheme (i.e.) must be supecified, or weviate client won't function as
+Pitfall: schema (i.e. http) must be supecified, or weviate client won't function as
 it depends on `hostname` from urllib.parse.urlparse will be empty if schema is not specified.
 */}}
 WEAVIATE_ENDPOINT: {{ printf "http://%s" .name | quote }}
@@ -404,6 +485,11 @@ WEAVIATE_ENDPOINT: {{ printf "http://%s" .name | quote }}
 # The Weaviate API key.
   {{- if .Values.weaviate.authentication.apikey }}
 # WEAVIATE_API_KEY: {{ first .Values.weaviate.authentication.apikey.allowed_keys }}
+  {{- end }}
+  {{- if .Values.weaviate.grpcService.enabled }}
+WEAVIATE_GRPC_ENDPOINT: "{{ .Values.weaviate.grpcService.name }}:{{ index .Values.weaviate.grpcService.ports 0 "port" }}"
+  {{- else }}
+WEAVIATE_GRPC_ENDPOINT: "{{ .Values.weaviate.service.name }}:50051"
   {{- end }}
 {{- else if .Values.qdrant.enabled }}
 VECTOR_STORE: qdrant
@@ -452,12 +538,18 @@ proxy_send_timeout 3600s;
 {{- end }}
 
 {{- define "dify.nginx.config.nginx" }}
+{{- if or (not .Values.proxy.containerSecurityContext.enabled) (and .Values.proxy.containerSecurityContext.enabled (eq (int (default 0 .Values.proxy.containerSecurityContext.runAsUser)) 0)) }}
 user  nginx;
-worker_processes  auto;
+{{- end }}
+worker_processes  {{ .Values.proxy.workerProcesses | default "auto" }};
 {{- if .Values.proxy.log.persistence.enabled }}
 error_log  {{ .Values.proxy.log.persistence.mountPath }}/error.log notice;
 {{- end }}
+{{- if and .Values.proxy.containerSecurityContext.enabled (ne (int (default 0 .Values.proxy.containerSecurityContext.runAsUser)) 0) }}
+pid        /var/run/nginx/nginx.pid;
+{{- else }}
 pid        /var/run/nginx.pid;
+{{- end }}
 
 
 events {
@@ -491,7 +583,7 @@ http {
 
 {{- define "dify.nginx.config.default" }}
 server {
-    listen 80;
+    listen 8080;
     server_name _;
 
     location /console/api {
@@ -525,18 +617,24 @@ server {
       include proxy.conf;
     }
 
-    {{- if and .Values.pluginDaemon.enabled .Values.pluginDaemon.marketplace.enabled .Values.pluginDaemon.marketplace.apiProxyEnabled }}
+    {{- if and .Values.pluginDaemon.enabled (.Values.pluginDaemon.marketplace.enabled | default .Values.global.marketplace.enabled) (.Values.pluginDaemon.marketplace.apiProxyEnabled | default .Values.global.marketplace.apiProxyEnabled) }}
     location /marketplace {
       rewrite ^/marketplace/(.*)$ /$1 break;
       proxy_ssl_server_name on;
-      proxy_pass {{ .Values.api.url.marketplace | quote }};
+{{- $marketplaceUrl := (.Values.api.url.marketplace | default .Values.global.marketplace.url) -}}
+      proxy_pass {{ $marketplaceUrl | quote }};
       proxy_pass_request_headers off;
-      proxy_set_header Host {{ regexReplaceAll "^https?://([^/]+).*" .Values.api.url.marketplace "${1}" | quote }};
+      proxy_set_header Host {{ regexReplaceAll "^https?://([^/]+).*" $marketplaceUrl "${1}" | quote }};
       proxy_set_header Connection "";
     }
     {{- end }}
 
     location /mcp {
+      proxy_pass http://{{ template "dify.api.fullname" .}}:{{ .Values.api.service.port }};
+      include proxy.conf;
+    }
+
+    location /triggers {
       proxy_pass http://{{ template "dify.api.fullname" .}}:{{ .Values.api.service.port }};
       include proxy.conf;
     }
@@ -609,9 +707,15 @@ cache_store_log none
 
 {{- define "dify.pluginDaemon.db.config" -}}
 {{- if .Values.externalPostgres.enabled }}
+DB_TYPE: postgresql
 DB_HOST: {{ .Values.externalPostgres.address | quote }}
 DB_PORT: {{ .Values.externalPostgres.port | toString | quote }}
 DB_DATABASE: {{ .Values.externalPostgres.database.pluginDaemon | quote }}
+{{- else if .Values.externalMysql.enabled }}
+DB_TYPE: mysql
+DB_HOST: {{ .Values.externalMysql.address | quote }}
+DB_PORT: {{ .Values.externalMysql.port | toString | quote }}
+DB_DATABASE: {{ .Values.externalMysql.database.pluginDaemon | quote }}
 {{- else if .Values.postgresql.enabled }}
 # N.B.: `pluginDaemon` will the very same `PostgresSQL` database as `api`, `worker`,
 # which is NOT recommended for production and subject to possible confliction in the future releases of `dify`
@@ -627,16 +731,15 @@ SERVER_PORT: "5002"
 PLUGIN_REMOTE_INSTALLING_HOST: "0.0.0.0"
 PLUGIN_REMOTE_INSTALLING_PORT: "5003"
 MAX_PLUGIN_PACKAGE_SIZE: "52428800"
-PLUGIN_STORAGE_LOCAL_ROOT: {{ .Values.pluginDaemon.persistence.mountPath | quote }}
-PLUGIN_WORKING_PATH: {{ printf "%s/cwd" .Values.pluginDaemon.persistence.mountPath | clean | quote }}
+PLUGIN_WORKING_PATH: "/app/cwd"
 DIFY_INNER_API_URL: "http://{{ template "dify.api.fullname" . }}:{{ .Values.api.service.port }}"
 {{- include "dify.marketplace.config" . }}
 {{- end }}
 
 {{- define "dify.marketplace.config" }}
-{{- if .Values.pluginDaemon.marketplace.enabled }}
+{{- if .Values.pluginDaemon.marketplace.enabled | default .Values.global.marketplace.enabled }}
 MARKETPLACE_ENABLED: "true"
-MARKETPLACE_API_URL: {{ .Values.api.url.marketplaceApi | quote }}
+MARKETPLACE_API_URL: {{ .Values.api.url.marketplaceApi | default .Values.global.marketplace.apiUrl | quote }}
 {{- else }}
 MARKETPLACE_ENABLED: "false"
 {{- end }}
@@ -686,6 +789,6 @@ VOLCENGINE_TOS_ACCESS_KEY: {{ .Values.externalTOS.accessKey | quote }}
 # VOLCENGINE_TOS_SECRET_KEY: {{ .Values.externalTOS.secretKey | quote }}
 {{- else }}
 PLUGIN_STORAGE_TYPE: local
-STORAGE_LOCAL_PATH: {{ .Values.pluginDaemon.persistence.mountPath | quote }}
+PLUGIN_STORAGE_LOCAL_ROOT: {{ .Values.pluginDaemon.persistence.mountPath | quote }}
 {{- end }}
 {{- end }}

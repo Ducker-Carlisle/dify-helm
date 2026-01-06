@@ -59,9 +59,8 @@ spec:
         - name: {{ . }}
       {{- end }}
       {{- end }}
-      {{- if .Values.api.podSecurityContext }}
-      securityContext:
-{{ toYaml .Values.api.podSecurityContext | indent 8 }}
+      {{- if .Values.api.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.api.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
       containers:
       - image: "{{ .Values.image.api.repository }}:{{ default .Chart.AppVersion .Values.image.api.tag }}"
@@ -90,9 +89,9 @@ spec:
           tcpSocket:
             port: api
         {{- end }}
-        {{- if .Values.api.containerSecurityContext }}
-        securityContext:
-{{ toYaml .Values.api.containerSecurityContext | indent 10 }}
+        # We don't require a privileged container in this case
+        {{- if .Values.api.containerSecurityContext.enabled }}
+        securityContext: {{- omit .Values.api.containerSecurityContext "enabled" | toYaml | nindent 10 }}
         {{- end }}
         env:
         {{- if .Values.sandbox.enabled }}
@@ -121,6 +120,9 @@ spec:
         - name: app-data
           mountPath: {{ .Values.api.persistence.mountPath | quote }}
           subPath: {{ .Values.api.persistence.persistentVolumeClaim.subPath | default "" }}
+        {{- end }}
+        {{- if .Values.api.extraVolumeMounts }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.api.extraVolumeMounts "context" $) | nindent 8 }}
         {{- end }}
     {{- if and (.Values.nodeSelector) (not .Values.api.nodeSelector) }}
       nodeSelector:
@@ -151,5 +153,8 @@ spec:
       - name: app-data
         persistentVolumeClaim:
           claimName: {{ .Values.api.persistence.persistentVolumeClaim.existingClaim | default (printf "%s" (include "dify.fullname" . | trunc 58)) }}
+      {{- end }}
+      {{- if .Values.api.extraVolumes }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.api.extraVolumes "context" $) | nindent 6 }}
       {{- end }}
 {{- end }}

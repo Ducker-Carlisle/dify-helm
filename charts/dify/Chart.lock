@@ -7,9 +7,9 @@ dependencies:
   version: 16.13.2
 - name: weaviate
   repository: https://weaviate.github.io/weaviate-helm
-  version: 16.1.0
+  version: 17.3.3
 - name: qdrant
   repository: https://qdrant.github.io/qdrant-helm
   version: 0.7.4
-digest: sha256:af973214e7e0956580f0cfc75dd9cd4f0d4b12307d75eca4cccd92b48ff58122
-generated: "2025-04-10T11:27:48.966705353+02:00"
+digest: sha256:b59b7f46caadae116dddd6e0639bf3aca2df34af3ce1d52b001b3c5cf3e70931
+generated: "2026-01-06T17:46:47.826848+01:00"

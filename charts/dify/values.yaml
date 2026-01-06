@@ -2,13 +2,48 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+global:
+  # The edition of the application, SELF_HOSTED or CLOUD
+  edition: "SELF_HOSTED"
+  # A secret key that is used for securely signing the session cookie and encrypting sensitive information on the database. You can generate a strong key using `openssl rand -base64 42`.
+  appSecretKey: "sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U"
+  # A global secret key for all inter-component API calls among Dify containers (e.g. `api`, `sandbox` and `pluginDaemon`). You can generate a strong key using `openssl rand -base64 42`.
+  # Takes no effect when left empty. Can be overridden by component-specific values.
+  internalApiKey: ""
+  # The backend domain of the console API, used to concatenate the authorization callback.
+  # If empty, it is the same domain. Example: console.dify.ai
+  consoleApiDomain: ""
+  # The front-end domain of the console web, used to concatenate some front-end addresses and for CORS configuration use.
+  # If empty, it is the same domain. Example: console.dify.ai
+  consoleWebDomain: ""
+  # Service API domain, used to display Service API Base Url to the front-end.
+  # If empty, it is the same domain. Example: api.dify.ai
+  serviceApiDomain: ""
+  # WebApp API backend domain, used to declare the back-end URL for the front-end API.
+  # If empty, it is the same domain. Example: app.dify.ai
+  appApiDomain: ""
+  # WebApp domain, used to display WebAPP API Base Url to the front-end. If empty, it is the same domain. Example: app.dify.ai
+  appWebDomain: ""
+  # File preview or download domain, used to display the file preview
+  # or download URL to the front-end or as a multi-modal model input;
+  # In order to prevent others from forging, the image preview URL is signed and has a 5-minute expiration time.
+  filesDomain: ""
+  marketplace:
+    enabled: true
+    url: "https://marketplace.dify.ai"
+    apiUrl: "https://marketplace.dify.ai"
+    # Takes effect only if built-in `nginx` were enabled
+    # If enabled, route marketplace api call to built-in `nginx` and strip headers for tracking.
+    # https://github.com/BorisPolonsky/dify-helm/pull/131
+    apiProxyEnabled: false
+
 ## @section Dify image parameters
 ##
 
 image:
   api:
     repository: langgenius/dify-api
-    tag: "1.8.1"
+    tag: "1.10.1-fix.1"
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -19,7 +54,7 @@ image:
 
   web:
     repository: langgenius/dify-web
-    tag: "1.8.1"
+    tag: "1.10.1-fix.1"
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -63,7 +98,7 @@ image:
 
   pluginDaemon:
     repository: langgenius/dify-plugin-daemon
-    tag: 0.2.0-local
+    tag: 0.4.1-local
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -124,14 +159,26 @@ api:
   customReadinessProbe: {}
   ## @param api.customStartupProbe Custom startupProbe that overrides the default one
   customStartupProbe: {}
-  # Configure Pods Security Context
-  podSecurityContext: {}
-  # Configure Container Security Context
-  containerSecurityContext: {}
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param api.podSecurityContext.enabled Enabled Dify api pod's Security Context
+  ## @param api.podSecurityContext.fsGroup Set Dify api pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param api.containerSecurityContext.enabled Dify api containers' Security Context
+  ## @param api.containerSecurityContext.runAsUser Set Dify api containers' Security Context runAsUser
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
   extraEnv:
   # Apply your own Environment Variables if necessary.
   # Variables defined here take higher priority than those from `ConfigMap` generated given `.Values`
-  # The direct approach
+  # Direct value assignment
   # - name: LANG
   #   value: "C.UTF-8"
   #   - name: SECRET_KEY
@@ -197,25 +244,21 @@ api:
   # The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
   logLevel: INFO
   url:
-    # The backend URL of the console API, used to concatenate the authorization callback.
-    # If empty, it is the same domain. Example: https://api.console.dify.ai
+    # DEPRECATED: Use global.consoleApiDomain instead.
     consoleApi: ""
-    # The front-end URL of the console web, used to concatenate some front-end addresses and for CORS configuration use.
-    # If empty, it is the same domain. Example: https://console.dify.ai
+    # DEPRECATED: Use global.consoleWebDomain instead.
     consoleWeb: ""
-    # Service API URL, used to display Service API Base URL to the front-end.
-    # If empty, it is the same domain. Example: https://api.dify.ai
+    # DEPRECATED: Use global.serviceApiDomain instead.
     serviceApi: ""
-    # WebApp API backend URL, used to declare the back-end URL for the front-end API.
-    # If empty, it is the same domain. Example: https://app.dify.ai
+    # DEPRECATED: Use global.appApiDomain instead.
     appApi: ""
-    # WebApp URL, used to display WebAPP API Base URL to the front-end. If empty, it is the same domain. Example: https://api.app.dify.ai
+    # DEPRECATED: Use global.appWebDomain instead.
     appWeb: ""
-    # File preview or download URL prefix, used to display the file preview
-    # or download URL to the front-end or as a multi-modal model input;
-    # In order to prevent others from forging, the image preview URL is signed and has a 5-minute expiration time.
+    # DEPRECATED: Use global.filesDomain instead.
     files: ""
+    # DEPRECATED: Use global.marketplace.apiUrl instead.
     marketplaceApi: "https://marketplace.dify.ai"
+    # DEPRECATED: Use global.marketplace.url instead.
     marketplace: "https://marketplace.dify.ai"
   mail:
     # default email sender from email address, if not given a specific address
@@ -238,8 +281,8 @@ api:
         optimistic: false
   # When enabled, migrations will be executed prior to application startup and the application will start after the migrations have completed.
   migration: true
-  # A secret key that is used for securely signing the session cookie and encrypting sensitive information on the database. You can generate a strong key using `openssl rand -base64 42`.
-  secretKey: "sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U"
+  # DEPRECATED: Use global.appSecretKey instead.
+  secretKey: ""
   ## Storage for `api` and `worker`
   ## Ignored if `.Values.externalS3.enabled` is true
   ##
@@ -260,6 +303,12 @@ api:
       accessModes: ReadWriteMany
       size: 5Gi
       subPath: ""
+  ## @param api.extraVolumes Optionally specify extra list of additional volumes for the API pod(s)
+  ##
+  extraVolumes: []
+  ## @param api.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the API container(s)
+  ##
+  extraVolumeMounts: []
   ## Dify API ServiceAccount configuration
   ##
   serviceAccount:
@@ -302,14 +351,26 @@ worker:
   ## @param worker.updateStrategy Update strategy type and configuration parameters
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
   updateStrategy: {}
-  # Configure Pods Security Context
-  podSecurityContext: {}
-  # Configure Container Security Context
-  containerSecurityContext: {}
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param worker.podSecurityContext.enabled Enabled Dify worker pod's Security Context
+  ## @param worker.podSecurityContext.fsGroup Set Dify worker pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param worker.containerSecurityContext.enabled Dify worker containers' Security Context
+  ## @param worker.containerSecurityContext.runAsUser Set Dify worker containers' Security Context runAsUser
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
   extraEnv:
   # Apply your own Environment Variables if necessary.
   # Variables defined here take higher priority than those from `ConfigMap` generated given `.Values`
-  # The direct approach
+  # Direct value assignment
   # - name: LANG
   #   value: "C.UTF-8"
   #   - name: SECRET_KEY
@@ -321,6 +382,12 @@ worker:
   #        key: DB_PASSWORD
 
   logLevel: INFO
+  ## @param worker.extraVolumes Optionally specify extra list of additional volumes for the worker pod(s)
+  ##
+  extraVolumes: []
+  ## @param worker.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the worker container(s)
+  ##
+  extraVolumeMounts: []
   ## Dify Worker ServiceAccount configuration
   ##
   serviceAccount:
@@ -357,16 +424,34 @@ beat:
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
   updateStrategy:
     type: Recreate
-  # Configure Pods Security Context
-  podSecurityContext: {}
-  # Configure Container Security Context
-  containerSecurityContext: {}
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param beat.podSecurityContext.enabled Enabled Dify Celery Beat pod's Security Context
+  ## @param beat.podSecurityContext.fsGroup Set Celery Beat pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param beat.containerSecurityContext.enabled Celery Beat containers' Security Context
+  ## @param beat.containerSecurityContext.runAsUser Set Celery Beat containers' Security Context runAsUser
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
   extraEnv:
   # Apply your own Environment Variables if necessary.
   # Variables defined here take higher priority than those from `ConfigMap` generated given `.Values`
   # - name: ENABLE_CLEAN_EMBEDDING_CACHE_TASK
   #   value: "false"
   logLevel: INFO
+  ## @param beat.extraVolumes Optionally specify extra list of additional volumes for the beat pod(s)
+  ##
+  extraVolumes: []
+  ## @param beat.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the beat container(s)
+  ##
+  extraVolumeMounts: []
   ## celery beat ServiceAccount configuration
   ##
   serviceAccount:
@@ -402,13 +487,28 @@ proxy:
   customStartupProbe: {}
   ## @param proxy.clientMaxBodySize Custom client_max_body_size param nginx default: 15m
   clientMaxBodySize: ""
+  ## @param proxy.workerProcesses Number of worker processes for nginx. Set to 'auto' (string) to automatically detect the number of available CPUs, or specify an integer (e.g., 4) for a fixed number of worker processes.
+  workerProcesses: "auto"
   ## @param proxy.updateStrategy Update strategy type and configuration parameters
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
   updateStrategy: {}
-  # Configure Pods Security Context
-  podSecurityContext: {}
-  # Configure Container Security Context
-  containerSecurityContext: {}
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param proxy.podSecurityContext.enabled Enabled Dify proxy pod's Security Context
+  ## @param proxy.podSecurityContext.fsGroup Set Dify proxy pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: true
+    fsGroup: 101
+    fsGroupChangePolicy: "Always"
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param proxy.containerSecurityContext.enabled Dify proxy containers' Security Context
+  ## @param proxy.containerSecurityContext.runAsUser Set Dify proxy containers' Security Context runAsUser
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 101
   extraEnv:
   # Apply your own Environment Variables if necessary
   # - name: LANG
@@ -435,11 +535,12 @@ proxy:
         accessModes: ReadWriteMany
         size: 1Gi
         subPath: ""
-  service:
-    port: 80
-    annotations: {}
-    labels: {}
-    clusterIP: ""
+  ## @param proxy.extraVolumes Optionally specify extra list of additional volumes for the proxy pod(s)
+  ##
+  extraVolumes: []
+  ## @param proxy.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the proxy container(s)
+  ##
+  extraVolumeMounts: []
   ## Proxy ServiceAccount configuration
   ##
   serviceAccount:
@@ -510,10 +611,8 @@ web:
   podSecurityContext: {}
   # Configure Container Security Context
   containerSecurityContext: {}
-  extraEnv:
   # Apply your own Environment Variables if necessary
-  - name: EDITION
-    value: "SELF_HOSTED"
+  extraEnv: []
   service:
     port: 3000
     annotations: {}
@@ -538,6 +637,12 @@ web:
   ## @param web.enableServiceLinks Disable this feature if additional environment variables would lead to `E2BIG` errors in case frontend were managed by `pm2`
   ##
   enableServiceLinks: false
+  ## @param web.extraVolumes Optionally specify extra list of additional volumes for the web pod(s)
+  ##
+  extraVolumes: []
+  ## @param web.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the web container(s)
+  ##
+  extraVolumeMounts: []
 
 sandbox:
   enabled: true
@@ -598,22 +703,21 @@ sandbox:
   #   value: "C.UTF-8"
   - name: WORKER_TIMEOUT
     value: "15"
-  ## @param sandbox.persistence.enabled Use volumes to persist data
+  ## @param sandbox.extraVolumes Optionally specify extra list of additional volumes for the Sandbox pod(s)
   ##
-  persistence:
-    enabled: false
-    ## @param sandbox.persistence.volumes Optionally specify extra list of additional volumes for the Sandbox pod(s)
-    ##
-    volumes: []
-    ## @param sandbox.persistence.volumeMounts Optionally specify extra list of additional volumeMounts for the Sandbox container(s)
-    ##
-    volumeMounts: []
+  extraVolumes: []
+  ## @param sandbox.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Sandbox container(s)
+  ##
+  extraVolumeMounts: []
   service:
     port: 8194
     annotations: {}
     labels: {}
     clusterIP: ""
   auth:
+    ## @param sandbox.auth.apiKey API key for sandbox code execution service. You can generate a strong key using `openssl rand -base64 42`.
+    ## If not set, uses global.internalApiKey
+    ##
     apiKey: "dify-sandbox"
 
   ## Sandbox ServiceAccount configuration
@@ -682,6 +786,12 @@ ssrfProxy:
         accessModes: ReadWriteMany
         size: 1Gi
         subPath: ""
+  ## @param ssrfProxy.extraVolumes Optionally specify extra list of additional volumes for the ssrfProxy pod(s)
+  ##
+  extraVolumes: []
+  ## @param ssrfProxy.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the ssrfProxy container(s)
+  ##
+  extraVolumeMounts: []
   service:
     port: 3128
     annotations: {}
@@ -741,8 +851,15 @@ pluginDaemon:
     labels: {}
     clusterIP: ""
   auth:
+    ## @param pluginDaemon.auth.serverKey Secret key for plugin daemon server authentication.
+    ## You can generate a strong key using `openssl rand -base64 42`.
+    ## If not set, uses global.internalApiKey
+    ##
     serverKey: "lYkiYYT6owG+71oLerGzA7GXCgOT++6ovaezWAjpCjf+Sjc3ZtU+qUEi"
-    # A separate key for interactions between `api`(`worker`) and `pluginDaemon`
+    ## @param pluginDaemon.auth.difyApiKey A separate key for interactions between `api`(`worker`) and `pluginDaemon`.
+    ## You can generate a strong key using `openssl rand -base64 42`.
+    ## If not set, uses global.internalApiKey
+    ##
     difyApiKey: "QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1"
   ## Storage for `pluginDaemon`
   ## Ignored if external object storage were configured via `.Values.externalS3` sections.
@@ -764,8 +881,16 @@ pluginDaemon:
       accessModes: ReadWriteMany
       size: 5Gi
       subPath: ""
+  ## @param pluginDaemon.extraVolumes Optionally specify extra list of additional volumes for the pluginDaemon pod(s)
+  ##
+  extraVolumes: []
+  ## @param pluginDaemon.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the pluginDaemon container(s)
+  ##
+  extraVolumeMounts: []
   marketplace:
+    # DEPRECATED: Use global.marketplace.enabled instead.
     enabled: true
+    # DEPRECATED: Use global.marketplace.apiProxyEnabled instead.
     # Takes effect only if built-in `nginx` were enabled
     # If enabled, route marketplace api call to built-in `nginx` and strip headers for tracking.
     # https://github.com/BorisPolonsky/dify-helm/pull/131
@@ -877,14 +1002,14 @@ weaviate:
   enabled: false
   image:
     # registry where weaviate image is stored
-    registry: docker.io
+    registry: cr.weaviate.io
     # Tag of weaviate image to deploy
     # Note: We strongly recommend you overwrite this value in your own values.yaml.
     # Otherwise a mere upgrade of the chart could lead to an unexpected upgrade
     # of weaviate. In accordance with Infra-as-code, you should pin this value
     # down and only change it if you explicitly want to upgrade the Weaviate
     # version.
-    tag: 1.19.1
+    tag: 1.27.27
     repo: semitechnologies/weaviate
     # Image pull policy: https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy
     pullPolicy: IfNotPresent
@@ -894,14 +1019,14 @@ weaviate:
   # example setting the nofile limit
   command: ["/bin/weaviate"]
   args:
-    - "--host"
-    - "0.0.0.0"
-    - "--port"
-    - "8080"
-    - "--scheme"
-    - "http"
-    - "--config-file"
-    - "/weaviate-config/conf.yaml"
+    - '--host'
+    - '0.0.0.0'
+    - '--port'
+    - '8080'
+    - '--scheme'
+    - 'http'
+    - '--config-file'
+    - '/weaviate-config/conf.yaml'
     - --read-timeout=60s
     - --write-timeout=60s
 
@@ -929,6 +1054,14 @@ weaviate:
         repo: alpine
         tag: latest
         pullPolicy: IfNotPresent
+    ensureFileOwnershipContainer:
+      # This init container sets the file ownerships of /var/lib/weaviate directory to the ones set in
+      # containerSecurityContext.runAsUser and containerSecurityContext.fsGroup settings to ensure that Weaviate is able
+      # to start in unprivileged configuration.
+      # Enable this init container only if Weaviate was configured previously without security context
+      # and now containerSecurityContext is provided to run Weaviate container with non-root user.
+      # Please be sure to set at least containerSecurityContext.runAsUser and containerSecurityContext.fsGroup.
+      enabled: false
 
     extraInitContainers: {}
     # - image: some-image
@@ -938,8 +1071,19 @@ weaviate:
   # to cases where no data is imported yet. Scaling down after importing data may
   # break usability. Full dynamic scalability will be added in a future release.
   replicas: 1
-  resources:
-    {}
+
+  # Define how pods will be created. Possible values: OrderedReady | Parallel
+  # OrderedReady - pods will be created one after another
+  # Parallel - all pods will be created at once
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+    # This setting is only available in K8s v1.24 and higher.
+    # Setting maxUnavailable to 100% results in removing all of the pods
+    # and re-creating them in parallel all at once.
+    # rollingUpdate:
+    #   maxUnavailable: 100%
+  resources: {}
     # requests:
     #   cpu: '500m'
     #   memory: '300Mi'
@@ -947,11 +1091,33 @@ weaviate:
     #   cpu: '1000m'
     #   memory: '1Gi'
 
-  # Add a service account ot the Weaviate pods if you need Weaviate to have permissions to
+  # security Context for the Weaviate Pods. The configurations are the same as setting them
+  # as described here: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+  securityContext: {}
+
+  # Security context for the Weaviate container. Override overlapping settings made at the Pod level.
+  containerSecurityContext: {}
+    # runAsUser: 1000
+    # runAsGroup: 1000
+    # fsGroup: 1000
+    # fsGroupChangePolicy: "OnRootMismatch"
+    # runAsNonRoot: true
+    # allowPrivilegeEscalation: false
+    # privileged: false
+    # readOnlyRootFilesystem: true
+
+  # Add a service account to the Weaviate pods if you need Weaviate to have permissions to
   # access kubernetes resources or cloud provider resources. For example for it to have
   # access to a backup up bucket, or if you want to restrict Weaviate pod in any way.
   # By default, use the default ServiceAccount
   serviceAccountName:
+
+  # Kubernetes Cluster domain name, used for resolving intra-cluster requests, i.e
+  # between instances of weaviate.
+  # Note: The final '.' on the end of the hostname makes it a FQDN, and is required for
+  # DNS to resolve in all kubernetes environments.
+  # See https://github.com/weaviate/weaviate-helm/issues/175 for details.
+  clusterDomain: cluster.local.
 
   # The Persistent Volume Claim settings for Weaviate. If there's a
   # storage.fullnameOverride field set, then the default pvc will not be
@@ -965,7 +1131,25 @@ weaviate:
   # weaviate only accessible within your cluster.
   service:
     name: weaviate
-    # type: LoadBalancer
+    type: ClusterIP
+    loadBalancerSourceRanges: []
+    # optionally set cluster IP if you want to set a static IP
+    clusterIP:
+    annotations: {}
+
+  # The service controls how weaviate gRPC endpoint is exposed to the outside world.
+  # If you don't want a public load balancer, you can also choose 'ClusterIP' or `NodePort`
+  # to make weaviate gRPC port be only accessible within your cluster.
+  # This service is by default enabled but if you don't want it to be deployed in your
+  # environment then it can be disabled by setting enabled: false option.
+  grpcService:
+    enabled: true
+    name: weaviate-grpc
+    ports:
+      - name: grpc
+        protocol: TCP
+        port: 50051
+        # Target port is going to be the same for every port
     type: ClusterIP
     loadBalancerSourceRanges: []
     # optionally set cluster IP if you want to set a static IP
@@ -973,10 +1157,21 @@ weaviate:
     annotations: {}
 
   # Adjust liveness, readiness and startup probes configuration
+  # below is an example that can be used to switch the probeType to exec command
+  # readinessProbe: # (Compatible with liveness, readiness and startup probe configurations)
+  #   probeType: exec
+  #   probe:
+  #     exec:
+  #       command: ["/bin/sh", "-c", "wget --spider --server-response --tries=1 --timeout=30 -o /dev/null localhost:8080/v1/.well-known/ready"]
+
   startupProbe:
     # For kubernetes versions prior to 1.18 startupProbe is not supported thus can be disabled.
     enabled: false
-
+    probeType: httpGet
+    probe:
+      httpGet:
+        path: /v1/.well-known/ready
+        port: 8080
     initialDelaySeconds: 300
     periodSeconds: 60
     failureThreshold: 50
@@ -984,6 +1179,11 @@ weaviate:
     timeoutSeconds: 3
 
   livenessProbe:
+    probeType: httpGet
+    probe:
+      httpGet:
+        path: /v1/.well-known/live
+        port: 8080
     initialDelaySeconds: 900
     periodSeconds: 10
     failureThreshold: 30
@@ -991,11 +1191,17 @@ weaviate:
     timeoutSeconds: 3
 
   readinessProbe:
+    probeType: httpGet
+    probe:
+      httpGet:
+        path: /v1/.well-known/ready
+        port: 8080
     initialDelaySeconds: 3
     periodSeconds: 10
     failureThreshold: 3
     successThreshold: 1
     timeoutSeconds: 3
+
 
   terminationGracePeriodSeconds: 600
 
@@ -1051,17 +1257,53 @@ weaviate:
     limit: 100
   debug: false
 
+
   # Insert any custom environment variables or envSecrets by putting the exact name
   # and desired value into the settings below. Any env name passed will be automatically
   # set for the statefulSet.
   env:
     CLUSTER_GOSSIP_BIND_PORT: 7000
     CLUSTER_DATA_BIND_PORT: 7001
+
+    # Set RAFT cluster expected number of voter nodes at bootstrap.
+    # By default helm automatically sets this value based on the cluster size.
+    # RAFT_BOOTSTRAP_EXPECT: 1
+
+    # Set RAFT cluster bootstrap timeout (in seconds), default is 600 (seconds)
+    # which should be sufficient for most of the deployments.
+    RAFT_BOOTSTRAP_TIMEOUT: 600
+
+    # Set manually RAFT voter nodes.
+    # RAFT_JOIN value is automatically generated by "raft_configuration"
+    # template, but if someone wants to set this value manually then it can be done
+    # by setting RAFT_JOIN environment variable, example: RAFT_JOIN: "weaviate-0,weaviate-1"
+    # Please notice that in this case RAFT_BOOTSTRAP_EXPECT setting needs to be also adjusted manually
+    # to match the number of RAFT voters, so if there are 2 nodes set using RAFT_JOIN variable
+    # then RAFT_BOOTSTRAP_EXPECT needs to be equal 2 also.
+    # RAFT_JOIN: "weaviate-0"
+
+    # Set to true if voters nodes should handle only schema. With this setting enabled
+    # voter nodes will not accept any data, one needs to resize the cluster using replicas
+    # setting so that replicas > voters.
+    # RAFT_METADATA_ONLY_VOTERS: false
+
+    # RAFT_ENABLE_FQDN_RESOLVER setting changes the node name to node ip resolution to use DNS lookups
+    # instead of memberlist lookup. That means that when weaviate raft component wants to contact `weaviate-0`
+    # it's going to lookup the dns name `weaviate-0` instead of looking for the node-id in memberlist.
+    # This is particularly useful if running in an environment where you're using services (for example k8s)
+    # where the IP of the services is different from the actual node IP, but it proxies the connection to the node.
+    # RAFT_ENABLE_FQDN_RESOLVER: false
+
+    # RAFT_FQDN_RESOLVER_TLD setting acts in combination with RAFT_ENABLE_FQDN_RESOLVER and is appended
+    # in the format "[node-id].[tld]" when resolving a node-id to an ip.
+    # RAFT_FQDN_RESOLVER_TLD: "weaviate-0."
+
     # The aggressiveness of the Go Garbage Collector. 100 is the default value.
     GOGC: 100
 
     # Expose metrics on port 2112 for Prometheus to scrape
     PROMETHEUS_MONITORING_ENABLED: false
+    PROMETHEUS_MONITORING_GROUP: false
 
     # Set a MEM limit for the Weaviate Pod so it can help you both increase GC-related
     # performance as well as avoid GC-related out-of-memory (“OOM”) situations
@@ -1084,7 +1326,8 @@ weaviate:
     # If using ENV Vars to set up API Keys make sure to have `authentication.apikey` block commented out
     # to avoid any future changes. ENV Vars has priority over the config above `authentication.apikey`.
     # If using `authentication.apikey `the below ENV Vars will be used because they have priority,
-    # so comment them out to avoid any future changes.
+    # so comment them out to avoid any future changes. The same applies for the RBAC configuration
+    # under the authorization block.
     # Enables API key authentication. If it is set to 'false' the AUTHENTICATION_APIKEY_ALLOWED_KEYS
     # and AUTHENTICATION_APIKEY_USERS will not have any effect.
     # AUTHENTICATION_APIKEY_ENABLED: 'true'
@@ -1097,14 +1340,83 @@ weaviate:
     # The User/s can be a simple name or an email, no matter if it exists or not.
     # NOTE: Make sure to add the users to the authorization above overwise they will not be allowed to interact with Weaviate.
     # AUTHENTICATION_APIKEY_USERS: 'jane@doe.com,ian-smith'
+
+    # Enabling RBAC authorization. It is mutually exclusive with the AUTHORIZATION_ADMIN_LISTS variable. Either RBAC or the
+    # admin lists mechanism can be used.
+    # AUTHORIZATION_ENABLE_RBAC: "true"
+
+    # Users with admin's RBAC role. List one or more user identities, separated by commas, which will
+    # have the admin role assigned to. This role provides all permissions to the user, but it's required at least
+    # in one of the user for managing the cluster.
+    # AUTHORIZATION_ADMIN_USERS: "admin-user"
+
+    # Users with viewer's RBAC role. List one or more user identities, separated by commas, which will
+    # have the viewer role assigned to. This role allows read permissions in all different areas. Once assigned via
+    # config, it can't be revoked via API AuthZ calls.
+    # AUTHORIZATION_VIEWER_USERS: "viewer-user"
     AUTHENTICATION_APIKEY_ENABLED: "true"
     AUTHENTICATION_APIKEY_ALLOWED_KEYS: "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih"
     AUTHENTICATION_APIKEY_USERS: "hello@dify.ai"
     AUTHORIZATION_ADMINLIST_ENABLED: "true"
     AUTHORIZATION_ADMINLIST_USERS: "hello@dify.ai"
+
+
   envSecrets:
     # create a Kubernetes secret with AUTHENTICATION_APIKEY_ALLOWED_KEYS key and its respective value
     # AUTHENTICATION_APIKEY_ALLOWED_KEYS: name-of-the-k8s-secret-containing-the-comma-separated-api-keys
+
+  # Configure offload providers
+  offload:
+    s3:
+      enabled: false
+      # If one is using AWS EKS and has already configured K8s Service Account
+      # that holds the AWS credentials one can pass a name of that service account
+      # here using this setting.
+      # NOTE: the root `serviceAccountName` config has priority over this one, and
+      # if the root one is set this one will NOT overwrite it. This one is here for
+      # backwards compatibility.
+      serviceAccountName:
+
+      envconfig:
+        # Configure bucket where data should be saved, this setting is mandatory
+        OFFLOAD_S3_BUCKET: weaviate-offload
+
+        # Optional setting. Defaults to AWS S3 (s3.amazonaws.com).
+        # Set this option if you have a MinIO storage configured in your environment
+        # and want to use it instead of the AWS S3.
+        # OFFLOAD_S3_ENDPOINT: custom.minio.endpoint.address
+
+        # Optional setting. Defaults to true.
+        # Set this option if you don't want to use SSL.
+        # OFFLOAD_S3_USE_SSL: true
+
+        # Optional setting. Defaults to false.
+        # Set this option if you wan't Weaviate to create
+        # the bucket used for offloading tenants. Otherwise,
+        # if set to false Weaviate expects the bucket to be
+        # already created with the OFFLOAD_S3_BUCKET name
+        # OFFLOAD_S3_BUCKET_AUTO_CREATE: true
+
+        # You can pass environment AWS settings here:
+        # Define the region
+        # AWS_REGION: eu-west-1
+
+      # For Weaviate to be able to create bucket objects it needs a user credentials to authenticate to AWS.
+      # The User must have permissions to read/create/delete bucket objects.
+      # You can pass the User credentials (access-key id and access-secret-key) in 2 ways:
+      # 1. by setting the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY plain values in the `secrets` section below
+      #     this chart will create a kubernetes secret for you with these key-values pairs
+      # 2. create Kubernetes secret/s with AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY  keys and their respective values
+      #     Set the Key and the secret where it is set in `envSecrets` section below
+      secrets: {}
+      #   AWS_ACCESS_KEY_ID: access-key-id (plain text)
+      #   AWS_SECRET_ACCESS_KEY: secret-access-key (plain text)
+
+      # If one has already defined secrets with AWS credentials one can pass them using
+      # this setting:
+      envSecrets: {}
+      #   AWS_ACCESS_KEY_ID: name-of-the-k8s-secret-containing-the-key-id
+      #   AWS_SECRET_ACCESS_KEY: name-of-the-k8s-secret-containing-the-key
 
   # Configure backup providers
   backups:
@@ -1227,6 +1539,7 @@ weaviate:
       #   AZURE_STORAGE_KEY: name-of-the-k8s-secret-containing-account-key
       #   AZURE_STORAGE_CONNECTION_STRING: name-of-the-k8s-secret-containing-connection-string
 
+
   # modules are extensions to Weaviate, they can be used to support various
   # ML-models, but also other features unrelated to model inference.
   # An inference/vectorizer module is not required, you can also run without any
@@ -1243,14 +1556,20 @@ weaviate:
   # values.yaml will be ignored when defining a custom config map.
   custom_config_map:
     enabled: false
-    name: "custom-config"
+    name: 'custom-config'
 
   # Pass any annotations to Weaviate pods
   annotations:
 
+  extraVolumeMounts:
+
+  extraVolumes:
+
   nodeSelector:
 
   tolerations:
+
+  hostAliases:
 
   affinity:
     podAntiAffinity:
@@ -1264,6 +1583,12 @@ weaviate:
                   operator: In
                   values:
                     - weaviate
+
+  ## Optionally specify priorityClass name for the pod
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/#pod-priority
+  ##
+  priorityClassName: ""
+  globalPriorityClassName: ""
 
 service:
   type: ClusterIP
@@ -2291,8 +2616,6 @@ redis:
       ## @param replica.serviceAccount.annotations Additional custom annotations for the ServiceAccount
       ##
       annotations: {}
-  ## @section Redis&reg; Sentinel configuration parameters
-  ##
 
   ## @section Other Parameters
   ##
@@ -2438,12 +2761,15 @@ redis:
 ## @Section External service
 ##
 
+## @Section External Database
+##
+
 ## @section External PostgreSQL configuration
 ##
 
 ###################################
 # External postgres
-# - these configs are only used when `externalPostgres.enabled` is true
+# - these configs applies only if `externalPostgres.enabled` is true
 ###################################
 externalPostgres:
   enabled: false
@@ -2455,12 +2781,29 @@ externalPostgres:
     api: "dify"
     pluginDaemon: "dify_plugin"
 
+## @section External MySQL configuration
+##
+
+###################################
+# External MySQL
+# - these configs applies only if `externalMysql.enabled` is true and `externalPostgres.enabled` is false
+###################################
+externalMysql:
+  enabled: false
+  username: "root"
+  password: "difyai123456"
+  address: localhost
+  port: 3306
+  database:
+    api: "dify"
+    pluginDaemon: "dify_plugin"
+
 ## @section External Redis
 ##
 
 ###################################
 # External Redis
-# - these configs are only used when `externalRedis.enabled` is true
+# - these configs applies only if `externalRedis.enabled` is true
 ###################################
 externalRedis:
   enabled: false
@@ -2468,14 +2811,26 @@ externalRedis:
   port: 6379
   username: ""
   password: "difyai123456"
+  db:
+    app: 0
+    celery: 1
   useSSL: false
+  sentinel:
+    enabled: false
+    masterSet: "mymaster"
+    sentinels:
+      - "sentinel1.example:26379"
+      - "sentinel2.example:26379"
+      - "sentinel3.example:26379"
+    password: ""
+
 
 ## @Section Extenral storage backend
 ##
 
 ###################################
 # External S3
-# - these configs are only used when `externalS3.enabled` is true
+# - these configs applies only if `externalS3.enabled` is true
 ###################################
 externalS3:
   enabled: false
@@ -2483,18 +2838,17 @@ externalS3:
   pathStyle: false
   accessKey: "ak-difyai"
   secretKey: "sk-difyai"
-  useSSL: false
   bucketName:
     # Shared storage for `api` and `worker`
     api: "difyai"
-    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence (only used when `externalS3.enabled` is set to `true`).
+    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence.
     pluginDaemon:
   useIAM: false
   region: "us-east-1"
 
 ###################################
 # External Azure Blob Storage
-# - these configs are only used when `externalS3.enabled` is false and `externalAzureBlobStorage.enabled` is true
+# - these configs applies only if all external storage backends above are disabled and `externalAzureBlobStorage.enabled` is true
 ###################################
 externalAzureBlobStorage:
   enabled: false
@@ -2505,7 +2859,7 @@ externalAzureBlobStorage:
 
 ###################################
 # External OSS
-# - these configs are only used when both `externalS3.enabled` and `externalAzureBlobStorage.enabled` are false and `externalOSS.enabled` is true
+# - these configs applies only if all external storage backends above are disabled and `externalOSS.enabled` is true
 ###################################
 externalOSS:
   enabled: false
@@ -2515,26 +2869,26 @@ externalOSS:
   region: "ap-southeast-1"
   bucketName:
     api: "difyai"
-    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence (only used when `externalOSS.enabled` is set to `true`).
+    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence.
     pluginDaemon:
   authVersion: v4
   path: "your-path"
 
 ###################################
 # External Google Cloud Storage
-# - these configs are only used when `externalS3.enabled` and `externalAzureBlobStorage.enabled` and `externalOSS.enabled` are false and `externalGCS.enabled` is true
+# - these configs applies only if all external storage backends above are disabled and `externalGCS.enabled` is true
 ###################################
 externalGCS:
   enabled: false
   bucketName:
     api: "difyai"
-    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence (only used when `externalGCS.enabled` is set to `true`).
+    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence.
     pluginDaemon:
   serviceAccountJsonBase64: ""
 
 ###################################
 # External TENCENT COS
-# - these configs are only used when `externalS3.enabled` and `externalAzureBlobStorage.enabled` and `externalOSS.enabled` and `externalGCS.enabled` are false and `externalCOS.enabled` is true
+# - these configs applies only if all external storage backends above are disabled and `externalCOS.enabled` is true
 ###################################
 externalCOS:
   enabled: false
@@ -2543,13 +2897,13 @@ externalCOS:
   region: "your-region"
   bucketName:
     api: "your-bucket-name"
-    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence (only used when `externalCOS.enabled` is set to `true`).
+    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence.
     pluginDaemon:
   scheme: "your-scheme"
 
 ###################################
 # External HUAWEI OBS
-# - these configs are only used when `externalS3.enabled` and `externalAzureBlobStorage.enabled` and `externalOSS.enabled` and `externalGCS.enabled` and `externalCOS.enabled` are false and `externalOBS.enabled` is true
+# - these configs applies only if all external storage backends above are disabled and `externalOBS.enabled` is true
 ###################################
 externalOBS:
   enabled: false
@@ -2558,12 +2912,12 @@ externalOBS:
   secretKey: "your-secret-key"
   bucketName:
     api: "your-bucket-name"
-    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence (only used when `externalOBS.enabled` is set to `true`).
+    # If specifed, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence.
     pluginDaemon:
 
 ###################################
 # External Tinder Object Storage (TOS) from volcengine
-# - these configs are only used when `externalS3.enabled` and `externalAzureBlobStorage.enabled` and `externalOSS.enabled` and `externalGCS.enabled` and `externalCOS.enabled` and `externalOBS.enabled` are false and `externalTOS.enabled` is true
+# - these configs applies only if all external storage backends above are disabled and `externalTOS.enabled` is true
 ###################################
 externalTOS:
   enabled: false
@@ -2573,7 +2927,7 @@ externalTOS:
   bucketName:
     # Shared storage for `api` and `worker`
     api: "your-bucket-name"
-    # If specified, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence (only used when `externalTOS.enabled` is set to `true`).
+    # If specified, `pluginDaemon` will use this bucket instead of binding `PersistentVolume` for data persistence.
     pluginDaemon:
   region: "cn-beijing"
 
@@ -2582,16 +2936,18 @@ externalTOS:
 
 ###################################
 # External Weaviate
-# - these configs take effect when `externalWeaviate.enabled` is true
+# - these configs applies only if `externalWeaviate.enabled` is true
 ###################################
 externalWeaviate:
   enabled: false
-  endpoint: "http://weaviate:8080"
+  endpoint:
+    http: "http://weaviate:8080"
+    grpc: "grpc://weaviate:50051"
   apiKey: "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih"
 
 ###################################
 # External Qdrant
-# - these configs take effect only if `externalWeaviate.enabled` is `false` and `externalQdrant.enabled` is `true`
+# - these configs applies only if all vector databases above are disabled and `externalQdrant.enabled` is true
 ###################################
 externalQdrant:
   enabled: false
@@ -2604,7 +2960,7 @@ externalQdrant:
 
 ###################################
 # External Milvus
-# - these configs take effect only if both `externalWeaviate.enabled` and `externalQdrant.enabled` are set as `false` and `externalMilvus.enabled` is `true`
+# - these configs applies only if both `externalWeaviate.enabled` and `externalQdrant.enabled` are false and `externalMilvus.enabled` is true
 ###################################
 externalMilvus:
   enabled: false
@@ -2616,7 +2972,7 @@ externalMilvus:
 
 ###################################
 # External Pgvector
-# - these configs take effect only if both `externalWeaviate.enabled`, `externalQdrant.enabled` and `externalMilvus.enabled` are set as `false` and `externalPgvector.enabled` is `true`
+# - these configs applies only if all vector databases above are disabled and `externalPgvector.enabled` is true
 ###################################
 externalPgvector:
   enabled: false
@@ -2628,7 +2984,7 @@ externalPgvector:
 
 ###################################
 # External Tencent Vector DB
-# - these configs take effect only if both `externalWeaviate.enabled`, `externalQdrant.enabled` and `externalMilvus.enabled` and `externalPgvector.enabled` are set as `false` and `externalTencentVectorDB.enabled` is `true`
+# - these configs applies only if all vector databases above are disabled and `externalTencentVectorDB.enabled` is true
 ###################################
 externalTencentVectorDB:
   enabled: false
@@ -2642,20 +2998,20 @@ externalTencentVectorDB:
 
 ###################################
 # External MyScaleDB Vector DB
-# - these configs take effect only if both `externalWeaviate.enabled`, `externalQdrant.enabled` and `externalMilvus.enabled` and `externalPgvector.enabled` and `externalTencentVectorDB.enabled` are set as `false` and `externalMyScaleDB.enabled` is `true`
+# - these configs applies only if all vector databases above are disabled and `externalMyScaleDB.enabled` is true
 ###################################
 externalMyScaleDB:
   enabled: false
   host: "myscale"
   port: 8123
-  user: "default"
+  username: "default"
   password: ""
   database: "dify"
   ftsParams: ""
 
 ###################################
 # External TableStore Vector DB
-# - these configs take effect only if both `externalWeaviate.enabled`, `externalQdrant.enabled` and `externalMilvus.enabled` and `externalPgvector.enabled` and `externalTencentVectorDB.enabled` and `externalMyScaleDB.enabled` are set as `false` and `externalTableStore.enabled` is `true`
+# - these configs applies only if all vector databases above are disabled and `externalTableStore.enabled` is true
 ###################################
 externalTableStore:
   enabled: false
@@ -2666,7 +3022,7 @@ externalTableStore:
 
 ###################################
 # External Elasticsearch
-# - these configs take effect only if all other vector databases are disabled and `externalElasticsearch.enabled` is `true`
+# - these configs applies only if all vector databases above are disabled and `externalElasticsearch.enabled` is true
 ###################################
 externalElasticsearch:
   enabled: false
@@ -2682,7 +3038,7 @@ externalElasticsearch:
 
 ###################################
 # External Secret (External Secrets Operator)
-# - these configs are used when `externalSecret.enabled` is true
+# - these configs applies only if `externalSecret.enabled` is true
 # - when enabled, the built-in Secret resources will be replaced by ExternalSecret resources
 ###################################
 externalSecret:
